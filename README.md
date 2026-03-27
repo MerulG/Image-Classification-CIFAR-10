@@ -10,6 +10,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Project Structure
+
+- `src/preprocessing.py` — data loading, normalization, and augmentation pipeline for CIFAR-10
+
 ## Stack
 
 - **PyTorch** + **torchvision** — model training and CIFAR-10 data loading
