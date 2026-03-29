@@ -27,6 +27,32 @@ cd src && python train.py
 cd src && python evaluate.py
 ```
 
+## Best Model Performance
+
+Trained for 30 epochs with SGD + CosineAnnealingLR on CIFAR-10 (50k train / 10k test).
+
+| Metric | Value |
+|---|---|
+| Test accuracy | 85.17% |
+| Weighted F1 | 0.8507 |
+
+Per-class results:
+
+| Class | Precision | Recall | F1 |
+|---|---|---|---|
+| plane | 0.87 | 0.85 | 0.86 |
+| car | 0.94 | 0.95 | 0.94 |
+| bird | 0.84 | 0.74 | 0.79 |
+| cat | 0.74 | 0.67 | 0.70 |
+| deer | 0.85 | 0.84 | 0.84 |
+| dog | 0.74 | 0.83 | 0.78 |
+| frog | 0.85 | 0.91 | 0.88 |
+| horse | 0.89 | 0.87 | 0.88 |
+| ship | 0.89 | 0.94 | 0.91 |
+| truck | 0.92 | 0.92 | 0.92 |
+
+Training config: `lr=0.1`, `momentum=0.9`, `weight_decay=1e-4`, `batch_size=64`.
+
 ## Stack
 
 - **PyTorch** + **torchvision** — model training and CIFAR-10 data loading
