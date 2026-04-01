@@ -16,6 +16,7 @@ pip install -r requirements.txt
 - `src/model.py` — `CIFAR10CNN` architecture (3 conv blocks, adaptive pool, classifier head)
 - `src/train.py` — training loop with SGD + CosineAnnealingLR, checkpointing, and curve plots
 - `src/evaluate.py` — loads best checkpoint, computes accuracy/F1/classification report, saves confusion matrix
+- `src/api.py` — FastAPI inference service with `GET /` health check and `POST /predict` image upload endpoint
 
 ## Usage
 
@@ -25,6 +26,9 @@ cd src && python train.py
 
 # Evaluate (requires a trained checkpoint at models/best_model.pth)
 cd src && python evaluate.py
+
+# Serve (requires a trained checkpoint at models/best_model.pth)
+uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Best Model Performance

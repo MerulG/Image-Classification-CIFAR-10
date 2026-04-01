@@ -45,6 +45,15 @@ def compute_mean_std(dataset: torch.utils.data.Dataset) -> tuple[torch.Tensor, t
     return mean, std
 
 
+def get_normalization_stats() -> tuple[list[float], list[float]]:
+    """Load the raw CIFAR-10 training set and return computed mean/std as plain lists."""
+    raw_train = torchvision.datasets.CIFAR10(
+        root=DATA_DIR, train=True, download=True, transform=transforms.ToTensor()
+    )
+    mean, std = compute_mean_std(raw_train)
+    return mean.tolist(), std.tolist()
+
+
 def get_dataloaders(batch_size: int = 64) -> tuple[DataLoader, DataLoader]:
     """
     Build train and test DataLoaders for CIFAR-10.
