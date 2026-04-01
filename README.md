@@ -27,8 +27,12 @@ cd src && python train.py
 # Evaluate (requires a trained checkpoint at models/best_model.pth)
 cd src && python evaluate.py
 
-# Serve (requires a trained checkpoint at models/best_model.pth)
+# Serve locally (requires a trained checkpoint at src/models/best_model.pth)
 uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
+
+# Serve via Docker
+docker build -f docker/Dockerfile -t cifar10-api .
+docker run -p 8000:8000 cifar10-api
 ```
 
 ## Best Model Performance
