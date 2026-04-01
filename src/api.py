@@ -1,6 +1,9 @@
 import logging
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
 
 import torch
 import torch.nn.functional as F
@@ -10,6 +13,15 @@ from torchvision import transforms
 
 from model import CIFAR10CNN
 from preprocessing import get_normalization_stats
+from train import TrainConfig
+
+# Pickle serialized TrainConfig as __main__.TrainConfig (train.py ran as __main__).
+# Under uvicorn's worker process the entry module is __mp_main__ — inject into both
+# so pickle's find_class can resolve it regardless of how the server is launched.
+import sys as _sys
+for _mod in ("__main__", "__mp_main__"):
+    if _mod in _sys.modules:
+        setattr(_sys.modules[_mod], "TrainConfig", TrainConfig)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +31,7 @@ CLASSES = [
     "dog", "frog", "horse", "ship", "truck",
 ]
 
-CHECKPOINT_PATH = Path("models/best_model.pth")
+CHECKPOINT_PATH = Path(__file__).parent / "models" / "best_model.pth"
 
 model: CIFAR10CNN
 device: torch.device
@@ -56,7 +68,7 @@ async def lifespan(_app: FastAPI):
         transforms.Normalize(mean=mean, std=std),
     ])
 
-    checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
+    checkpoint = torch.load(CHECKPOINT_PATH, map_location=device, weights_only=False)
     model = CIFAR10CNN()
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
