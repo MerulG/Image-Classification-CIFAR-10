@@ -14,8 +14,9 @@ pip install -r requirements.txt
 
 - `src/preprocessing.py` — data loading, normalization, and augmentation pipeline for CIFAR-10
 - `src/model.py` — `CIFAR10CNN` architecture (3 conv blocks, adaptive pool, classifier head)
-- `src/train.py` — training loop with SGD + CosineAnnealingLR, checkpointing, and curve plots
-- `src/evaluate.py` — loads best checkpoint, computes accuracy/F1/classification report, saves confusion matrix
+- `src/mlflow_config.py` — centralised MLflow config (experiment name, tracking URI, `setup_mlflow()`)
+- `src/train.py` — training loop with SGD + CosineAnnealingLR, checkpointing, curve plots, and MLflow run logging
+- `src/evaluate.py` — loads best checkpoint, computes accuracy/F1/classification report, saves confusion matrix, and logs metrics/artifacts to MLflow
 - `src/api.py` — FastAPI inference service with `GET /` health check and `POST /predict` image upload endpoint
 
 ## Usage

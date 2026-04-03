@@ -1,3 +1,4 @@
+import mlflow
 import torch
 import torch.nn as nn
 import numpy as np
@@ -93,11 +94,24 @@ def evaluate() -> None:
     weighted_f1 = f1_score(labels, preds, average="weighted")
     print(f"\nWeighted F1 score: {weighted_f1:.4f}")
 
+    report = classification_report(labels, preds, target_names=CLASS_NAMES)
     print("\nClassification report:")
-    print(classification_report(labels, preds, target_names=CLASS_NAMES))
+    print(report)
 
     cm = confusion_matrix(labels, preds)
     plot_confusion_matrix(cm, CLASS_NAMES, CONFUSION_MATRIX_PATH)
+
+    mlflow.log_metrics({
+        "test_accuracy": float(overall_acc),
+        "test_f1_weighted": float(weighted_f1),
+    })
+
+    mlflow.log_artifact(CONFUSION_MATRIX_PATH)
+
+    report_path = "models/classification_report.txt"
+    with open(report_path, "w") as f:
+        f.write(report)
+    mlflow.log_artifact(report_path)
 
 
 if __name__ == "__main__":

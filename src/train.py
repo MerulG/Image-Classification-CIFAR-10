@@ -3,12 +3,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.pytorch
 import torch
 import torch.nn as nn
 from tqdm import tqdm
 
 from preprocessing import get_dataloaders
 from model import CIFAR10CNN
+from mlflow_config import setup_mlflow
 
 
 @dataclass
@@ -133,59 +136,86 @@ def train(config: TrainConfig) -> None:
         optimizer, T_max=config.num_epochs
     )
 
-    train_losses, val_losses = [], []
-    train_accs, val_accs = [], []
-    best_val_loss = float("inf")
+    setup_mlflow()
 
-    for epoch in range(1, config.num_epochs + 1):
-        current_lr = scheduler.get_last_lr()[0] if epoch > 1 else config.learning_rate
+    with mlflow.start_run() as run:
+        mlflow.log_params({
+            "epochs": config.num_epochs,
+            "batch_size": config.batch_size,
+            "learning_rate": config.learning_rate,
+            "weight_decay": config.weight_decay,
+            "optimizer": "SGD",
+            "scheduler": "CosineAnnealingLR",
+            "architecture": "CIFAR10CNN",
+            "num_classes": 10,
+        })
 
-        train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
-        )
-        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
-        scheduler.step()
+        train_losses, val_losses = [], []
+        train_accs, val_accs = [], []
+        best_val_loss = float("inf")
 
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-        train_accs.append(train_acc)
-        val_accs.append(val_acc)
+        for epoch in range(1, config.num_epochs + 1):
+            current_lr = scheduler.get_last_lr()[0] if epoch > 1 else config.learning_rate
 
-        print(
-            f"Epoch [{epoch:02d}/{config.num_epochs}]  "
-            f"lr={current_lr:.2e}  "
-            f"train_loss={train_loss:.4f}  train_acc={train_acc:.4f}  "
-            f"val_loss={val_loss:.4f}  val_acc={val_acc:.4f}"
-        )
+            train_loss, train_acc = train_one_epoch(
+                model, train_loader, criterion, optimizer, device
+            )
+            val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+            scheduler.step()
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            checkpoint = {
-                "epoch": epoch,
+            train_losses.append(train_loss)
+            val_losses.append(val_loss)
+            train_accs.append(train_acc)
+            val_accs.append(val_acc)
+
+            print(
+                f"Epoch [{epoch:02d}/{config.num_epochs}]  "
+                f"lr={current_lr:.2e}  "
+                f"train_loss={train_loss:.4f}  train_acc={train_acc:.4f}  "
+                f"val_loss={val_loss:.4f}  val_acc={val_acc:.4f}"
+            )
+
+            mlflow.log_metrics(
+                {
+                    "train_loss": train_loss,
+                    "train_accuracy": train_acc,
+                    "val_loss": val_loss,
+                    "val_accuracy": val_acc,
+                },
+                step=epoch,
+            )
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                checkpoint = {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "val_loss": val_loss,
+                    "val_acc": val_acc,
+                    "config": config,
+                }
+                best_path = os.path.join(config.checkpoint_dir, "best_model.pth")
+                torch.save(checkpoint, best_path)
+                print(f"  -> Best model saved (val_loss={val_loss:.4f})")
+
+        final_path = os.path.join(config.checkpoint_dir, "final_model.pth")
+        torch.save(
+            {
+                "epoch": config.num_epochs,
                 "model_state_dict": model.state_dict(),
-                "val_loss": val_loss,
-                "val_acc": val_acc,
+                "val_loss": val_losses[-1],
+                "val_acc": val_accs[-1],
                 "config": config,
-            }
-            best_path = os.path.join(config.checkpoint_dir, "best_model.pth")
-            torch.save(checkpoint, best_path)
-            print(f"  -> Best model saved (val_loss={val_loss:.4f})")
+            },
+            final_path,
+        )
+        print(f"Final model saved to {final_path}")
 
-    final_path = os.path.join(config.checkpoint_dir, "final_model.pth")
-    torch.save(
-        {
-            "epoch": config.num_epochs,
-            "model_state_dict": model.state_dict(),
-            "val_loss": val_losses[-1],
-            "val_acc": val_accs[-1],
-            "config": config,
-        },
-        final_path,
-    )
-    print(f"Final model saved to {final_path}")
+        curves_path = os.path.join(config.checkpoint_dir, "training_curves.png")
+        plot_curves(train_losses, val_losses, train_accs, val_accs, curves_path)
 
-    curves_path = os.path.join(config.checkpoint_dir, "training_curves.png")
-    plot_curves(train_losses, val_losses, train_accs, val_accs, curves_path)
+        mlflow.log_artifact("models/best_model.pth")
+        print(f"MLflow run ID: {run.info.run_id}")
 
 
 if __name__ == "__main__":
